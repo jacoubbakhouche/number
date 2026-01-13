@@ -10,7 +10,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/history" element={<HistoryPage />} />
-        <Route path="/order/:id" element={<Order />} />
+        <Route path="/order/:orderId" element={<Order />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
