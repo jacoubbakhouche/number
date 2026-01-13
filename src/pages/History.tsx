@@ -54,9 +54,15 @@ export const HistoryPage: React.FC = () => {
                             >
                                 <div className="flex justify-between items-start mb-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-300 ring-1 ring-slate-600">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/order/${order.id}`);
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-300 ring-1 ring-slate-600 hover:bg-slate-700 hover:text-white transition-colors"
+                                        >
                                             {Icon ? <Icon size={20} /> : <Clock size={20} />}
-                                        </div>
+                                        </button>
                                         <div>
                                             <div className="font-mono font-semibold text-slate-200">{order.phoneNumber}</div>
                                             <div className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
