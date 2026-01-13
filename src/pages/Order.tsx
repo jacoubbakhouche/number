@@ -7,7 +7,9 @@ import { Copy, Clock, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react'
 import { motion } from 'framer-motion';
 
 const Order = () => {
-    const { orderId } = useParams();
+    const params = useParams();
+    // Decode ID immediately to handle special chars like '+'
+    const orderId = params.orderId ? decodeURIComponent(params.orderId) : null;
     const navigate = useNavigate();
     const [order, setOrder] = useState<OrderType | null>(null);
     const [timeLeft, setTimeLeft] = useState("");

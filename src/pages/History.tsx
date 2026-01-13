@@ -50,8 +50,8 @@ export const HistoryPage: React.FC = () => {
                             <div
                                 key={order.id}
                                 onClick={() => {
-                                    const targetId = order.id || order.phoneNumber; // Fallback
-                                    if (targetId) navigate(`/order/${targetId}`);
+                                    const rawId = order.id || order.phoneNumber;
+                                    if (rawId) navigate(`/order/${encodeURIComponent(rawId)}`);
                                 }}
                                 className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-4 active:scale-98 transition-all cursor-pointer hover:bg-slate-800/60 group"
                             >
@@ -60,10 +60,10 @@ export const HistoryPage: React.FC = () => {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                // Fallback to phone number if ID is missing (for legacy data compatibility)
-                                                const targetId = order.id || order.phoneNumber;
-                                                if (targetId) {
-                                                    navigate(`/order/${targetId}`);
+                                                const rawId = order.id || order.phoneNumber;
+                                                // IMPORTANT: Encode the ID to handle '+' characters safely in URL
+                                                if (rawId) {
+                                                    navigate(`/order/${encodeURIComponent(rawId)}`);
                                                 } else {
                                                     alert("Error: Order ID is missing");
                                                 }
@@ -76,7 +76,6 @@ export const HistoryPage: React.FC = () => {
                                             <div className="font-mono font-semibold text-slate-200">{order.phoneNumber}</div>
                                             <div className="text-xs text-slate-500 flex gap-2">
                                                 <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                                                <span className="opacity-50">ID: {order.id || 'MISSING'}</span>
                                             </div>
                                         </div>
                                     </div>
