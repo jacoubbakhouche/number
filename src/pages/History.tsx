@@ -49,7 +49,10 @@ export const HistoryPage: React.FC = () => {
                         return (
                             <div
                                 key={order.id}
-                                onClick={() => navigate(`/order/${order.id}`)}
+                                onClick={() => {
+                                    const targetId = order.id || order.phoneNumber; // Fallback
+                                    if (targetId) navigate(`/order/${targetId}`);
+                                }}
                                 className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-4 active:scale-98 transition-all cursor-pointer hover:bg-slate-800/60 group"
                             >
                                 <div className="flex justify-between items-start mb-3">
@@ -57,7 +60,13 @@ export const HistoryPage: React.FC = () => {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                navigate(`/order/${order.id}`);
+                                                // Fallback to phone number if ID is missing (for legacy data compatibility)
+                                                const targetId = order.id || order.phoneNumber;
+                                                if (targetId) {
+                                                    navigate(`/order/${targetId}`);
+                                                } else {
+                                                    alert("Error: Order ID is missing");
+                                                }
                                             }}
                                             className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-300 ring-1 ring-slate-600 hover:bg-slate-700 hover:text-white transition-colors"
                                         >
@@ -65,7 +74,10 @@ export const HistoryPage: React.FC = () => {
                                         </button>
                                         <div>
                                             <div className="font-mono font-semibold text-slate-200">{order.phoneNumber}</div>
-                                            <div className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                            <div className="text-xs text-slate-500 flex gap-2">
+                                                <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                                                <span className="opacity-50">ID: {order.id || 'MISSING'}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className={`px-2 py-1 rounded-full text-xs font-bold ${order.code ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :

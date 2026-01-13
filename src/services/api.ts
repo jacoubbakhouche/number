@@ -276,10 +276,16 @@ class RealTwilioService {
         const saved = localStorage.getItem('my_orders');
         if (saved) {
             const orders = JSON.parse(saved);
-            return orders[orderId];
+            // 1. Try direct ID match
+            if (orders[orderId]) return orders[orderId];
+
+            // 2. Try searching my phone number (values)
+            const found = Object.values(orders).find((o: any) => o.phoneNumber === orderId || o.id === orderId);
+            return found as Order | undefined;
         }
         return undefined;
     }
+
 
     getMyOrders(): Order[] {
         const saved = localStorage.getItem('my_orders');

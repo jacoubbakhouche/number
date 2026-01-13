@@ -21,8 +21,8 @@ const Order = () => {
 
     // Initial Data Load
     useEffect(() => {
-        if (!orderId) {
-            setError("Invalid Link (No ID)");
+        if (!orderId || orderId === 'undefined' || orderId === 'null') {
+            setError(`Invalid Link. ID received: "${orderId}"`);
             return;
         }
 
