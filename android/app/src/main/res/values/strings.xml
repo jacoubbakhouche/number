@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Number App</string>
+    <string name="title_activity_main">Number App</string>
+    <string name="package_name">com.yakoub.numberapp</string>
+    <string name="custom_url_scheme">com.yakoub.numberapp</string>
+</resources>
