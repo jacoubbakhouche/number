@@ -58,13 +58,24 @@ class RealTwilioService {
             });
 
             if (!response.ok) {
-                console.error("Twilio Search Failed", await response.text());
-                // Fallback to Local/Mobile generic search if specific mobile endpoint fails
-                const fallbackUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/AvailablePhoneNumbers/${country.iso}/Local.json?SmsEnabled=true`;
-                const fallbackResponse = await fetch(fallbackUrl, { headers: { 'Authorization': this.getBasicAuth() } });
-                if (!fallbackResponse.ok) return [];
-                const fallbackData = await fallbackResponse.json();
-                return this.mapTwilioNumbers(fallbackData, serviceId);
+                const errText = await response.text();
+                console.error("Twilio Mobile Search Failed:", errText);
+
+                // If 404 (No mobile numbers found) or 400, try Local numbers
+                // If 401 (Auth), do not retry, just fail
+                if (response.status !== 401 && response.status !== 403) {
+                    const fallbackUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/AvailablePhoneNumbers/${country.iso}/Local.json?SmsEnabled=true`;
+                    console.log("Attempting Fallback to Local numbers...");
+                    const fallbackResponse = await fetch(fallbackUrl, { headers: { 'Authorization': this.getBasicAuth() } });
+
+                    if (!fallbackResponse.ok) {
+                        console.error("Twilio Local Search also failed:", await fallbackResponse.text());
+                        return [];
+                    }
+                    const fallbackData = await fallbackResponse.json();
+                    return this.mapTwilioNumbers(fallbackData, serviceId);
+                }
+                return [];
             }
 
             const data = await response.json();
@@ -169,45 +180,61 @@ class RealTwilioService {
         localStorage.setItem('my_orders', JSON.stringify(orders));
     }
 
-    // 4. استيراد الأرقام القديمة من Twilio مباشرة
+    // 4. استيراد الأرقام ومزامنتها (حذف ما تم حذفه من Twilio)
     async syncTwilioNumbers(): Promise<Order[]> {
         try {
             const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/IncomingPhoneNumbers.json`;
             const response = await fetch(url, { headers: { 'Authorization': this.getBasicAuth() } });
 
-            if (!response.ok) return [];
+            if (!response.ok) {
+                console.error("Sync Failed", await response.text());
+                return [];
+            }
 
             const data = await response.json();
+            const serverSids = new Set(data.incoming_phone_numbers.map((n: any) => n.sid));
             const syncedOrders: Order[] = [];
 
-            // Get local storage to merge
+            // Get local storage
             const saved = localStorage.getItem('my_orders') || '{}';
-            const localOrders = JSON.parse(saved);
+            let localOrders = JSON.parse(saved);
             const now = Date.now();
 
+            // 1. Add/Update numbers from Server
             data.incoming_phone_numbers.forEach((num: any) => {
-                // If we already have it locally, use local data (to keep service info if available)
                 if (localOrders[num.sid]) {
                     syncedOrders.push(localOrders[num.sid]);
                 } else {
-                    // New number found on Twilio, add it as an "Imported" order
+                    // New number found on Twilio
                     const newOrder: Order = {
                         id: num.sid,
                         phoneNumber: num.phone_number,
-                        serviceId: 'wa', // Default assumption, or 'unknown'
-                        countryId: 1, // Default to US, or parse from code
+                        serviceId: 'wa',
+                        countryId: 1,
                         status: 'READY',
-                        // CRITICAL FIX: When syncing an existing number from Twilio, use the CURRENT TIME as createdAt.
-                        // This prevents fetching old history/messages (like old Facebook codes) that existed before this sync.
-                        // We only want to see NEW messages arriving from this moment onwards.
-                        createdAt: Date.now(),
+                        createdAt: Date.now(), // New sync = active from now
                         expiresAt: now + 30 * 24 * 60 * 60 * 1000,
-                        code: undefined
+                        messages: []
                     };
-
-                    // Save to local storage so we track it from now on
                     localOrders[num.sid] = newOrder;
                     syncedOrders.push(newOrder);
+                }
+            });
+
+            // 2. Remove numbers that exist locally but NOT on Server (User deleted them from Twilio)
+            Object.keys(localOrders).forEach(localSid => {
+                if (!serverSids.has(localSid)) {
+                    console.log(`Removing deleted number: ${localSid}`);
+                    delete localOrders[localSid];
+                }
+            });
+
+            // 2. Remove numbers that exist locally but NOT on Server (User deleted them from Twilio)
+            // This fixes the issue where deleted numbers reappear or get stuck
+            Object.keys(localOrders).forEach(localSid => {
+                if (!serverSids.has(localSid)) {
+                    console.log(`[Sync] Removing deleted number from local storage: ${localSid}`);
+                    delete localOrders[localSid];
                 }
             });
 
