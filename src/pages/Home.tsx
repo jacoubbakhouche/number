@@ -79,6 +79,19 @@ export const Home: React.FC = () => {
                 {/* Header Section */}
                 {!availableNumbers && (
                     <div className="mb-8 text-center relative overflow-hidden rounded-3xl bg-slate-800/50 p-8 border border-slate-700/50">
+                        {/* My Numbers Link (Added) */}
+                        <div className="absolute top-4 right-4 z-20">
+                            <button
+                                onClick={() => navigate('/history')}
+                                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-full text-xs font-semibold border border-slate-600 shadow-lg transition-transform hover:scale-105"
+                            >
+                                <span>My Numbers</span>
+                                <span className="bg-indigo-500 text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">
+                                    {apiService.getMyOrders().length}
+                                </span>
+                            </button>
+                        </div>
+
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl"></div>
                         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
