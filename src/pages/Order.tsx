@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import type { Order as OrderType } from '../types';
 import { Layout } from '../components/Layout';
-import { Copy, Clock, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Copy, Clock, CheckCircle2, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Order = () => {
@@ -245,11 +245,37 @@ const Order = () => {
 
                 {/* Messages Log (Sijillat) */}
                 <div className="space-y-4">
-                    <h3 className="text-slate-400 font-medium text-sm px-1">سجل الرسائل الواردة (Records)</h3>
+                    <div className="flex justify-between items-center px-1">
+                        <h3 className="text-slate-400 font-medium text-sm flex items-center gap-2">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            Live Records / السجل
+                        </h3>
+                        <button
+                            onClick={async () => {
+                                const btn = document.getElementById('refresh-btn');
+                                if (btn) btn.classList.add('animate-spin');
+                                await apiService.getStatus(order.id);
+                                const updated = apiService.getOrderDetails(order.id);
+                                if (updated) {
+                                    setOrder(updated);
+                                    if (updated.code) setReceivedCode(updated.code);
+                                }
+                                setTimeout(() => btn?.classList.remove('animate-spin'), 1000);
+                            }}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-lg transition-colors border border-slate-700 hover:text-white group"
+                            title="Refresh Messages"
+                        >
+                            <Loader2 id="refresh-btn" size={16} className="group-hover:text-white" />
+                        </button>
+                    </div>
 
                     {!order.messages || order.messages.length === 0 ? (
-                        <div className="bg-dark-card border border-slate-800 rounded-xl p-8 text-center text-slate-500 text-sm">
-                            No messages received yet.
+                        <div className="bg-dark-card border border-slate-800 rounded-xl p-8 text-center text-slate-500 text-sm flex flex-col items-center gap-3">
+                            <Loader2 size={24} className="animate-spin text-slate-600" />
+                            <p>Waiting for incoming messages...</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
