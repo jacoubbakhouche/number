@@ -102,16 +102,20 @@ const Order = () => {
     };
 
     const startPolling = (id: string) => {
-        // Polling every 3 seconds for new SMS
+        // Polling every 4 seconds for new messages
+        // We do NOT stop polling anymore, to keep receiving new messages
         pollTimer.current = window.setInterval(async () => {
             const result = await apiService.getStatus(id);
-            if (result.startsWith('STATUS_OK')) {
-                const code = result.split(':')[1];
-                setReceivedCode(code);
-                setStatus('COMPLETED');
-                if (pollTimer.current) clearInterval(pollTimer.current);
+            // Updating local state if new stuff arrives
+            const updatedOrder = apiService.getOrderDetails(id);
+            if (updatedOrder) {
+                setOrder(updatedOrder);
+                if (updatedOrder.code) {
+                    setReceivedCode(updatedOrder.code);
+                    setStatus('COMPLETED');
+                }
             }
-        }, 3000);
+        }, 4000);
     };
 
     const copyToClipboard = (text: string) => {
@@ -143,8 +147,8 @@ const Order = () => {
     if (!order) return <div className="text-white p-10 text-center animate-pulse">Loading order details...</div>;
 
     const codeBoxClass = receivedCode
-        ? "transition-all duration-500 bg-dark-card border rounded-2xl p-8 min-h-[220px] flex flex-col items-center justify-center relative overflow-hidden border-green-500/50 bg-green-500/5"
-        : "transition-all duration-500 bg-dark-card border rounded-2xl p-8 min-h-[220px] flex flex-col items-center justify-center relative overflow-hidden border-slate-700";
+        ? "transition-all duration-500 bg-dark-card border rounded-2xl p-8 min-h-[220px] flex flex-col items-center justify-center relative overflow-hidden border-green-500/50 bg-green-500/5 mb-8"
+        : "transition-all duration-500 bg-dark-card border rounded-2xl p-8 min-h-[220px] flex flex-col items-center justify-center relative overflow-hidden border-slate-700 mb-8";
 
     const copyButtonClass = copied
         ? "w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-all font-medium text-lg shadow-lg"
@@ -163,7 +167,7 @@ const Order = () => {
                 </button>
 
                 {/* Number Card */}
-                <div className="bg-dark-card border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                <div className="bg-dark-card border border-slate-700 rounded-2xl p-6 relative overflow-hidden mb-6">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Clock size={100} />
                     </div>
@@ -189,15 +193,15 @@ const Order = () => {
                     </div>
                 </div>
 
-                {/* Code Box */}
+                {/* Code Box (Latest) */}
                 <div className={codeBoxClass}>
-                    {status === 'COMPLETED' ? (
+                    {receivedCode ? (
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             className="text-center w-full"
                         >
-                            <div className="bg-slate-900/50 p-8 rounded-2xl border border-emerald-500/30 text-center relative overflow-hidden group">
+                            <div className="bg-slate-900/50 p-6 rounded-2xl border border-emerald-500/30 text-center relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-emerald-500/10 blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
 
                                 <div className="relative">
@@ -209,16 +213,12 @@ const Order = () => {
                                     <div
                                         className="font-mono text-white transition-all break-all drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]"
                                         style={{
-                                            fontSize: receivedCode && receivedCode.length > 8 ? '1.25rem' : '3.75rem',
-                                            letterSpacing: receivedCode && receivedCode.length > 8 ? 'normal' : '0.5em'
+                                            fontSize: receivedCode.length > 8 ? '1.5rem' : '3.5rem',
+                                            letterSpacing: receivedCode.length > 8 ? 'normal' : '0.2em'
                                         }}
                                     >
                                         {receivedCode}
                                     </div>
-
-                                    <p className="text-slate-500 text-xs mt-4">
-                                        استخدم هذا الكود لتفعيل التطبيق
-                                    </p>
                                 </div>
                             </div>
                         </motion.div>
@@ -233,7 +233,6 @@ const Order = () => {
                                 <h3 className="text-xl font-medium text-white mb-2">Wait for code...</h3>
                                 <p className="text-slate-400 text-sm leading-relaxed">
                                     Waiting for SMS... <br />
-                                    (This may take up to 2 mins)
                                 </p>
                             </div>
 
@@ -244,19 +243,39 @@ const Order = () => {
                     )}
                 </div>
 
-                {/* Instructions */}
-                <div className="bg-dark-card border border-slate-800 rounded-xl p-6">
-                    <h3 className="text-white font-medium mb-4 text-sm">كيف تستخدمه؟</h3>
-                    <ul className="space-y-3 text-sm text-slate-400">
-                        <li className="flex gap-3">
-                            <span className="text-indigo-400 font-bold">1.</span>
-                            انسخ الرقم واستخدمه في التطبيق (واتساب/تليجرام).
-                        </li>
-                        <li className="flex gap-3">
-                            <span className="text-indigo-400 font-bold">2.</span>
-                            انتظر  هنا حتى يظهر الكود تلقائياً.
-                        </li>
-                    </ul>
+                {/* Messages Log (Sijillat) */}
+                <div className="space-y-4">
+                    <h3 className="text-slate-400 font-medium text-sm px-1">سجل الرسائل الواردة (Records)</h3>
+
+                    {!order.messages || order.messages.length === 0 ? (
+                        <div className="bg-dark-card border border-slate-800 rounded-xl p-8 text-center text-slate-500 text-sm">
+                            No messages received yet.
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {order.messages.map((msg, idx) => (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800 transition-colors"
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">
+                                            {msg.sender || 'Unknown Sender'}
+                                        </span>
+                                        <span className="text-xs text-slate-500">
+                                            {new Date(msg.date).toLocaleTimeString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-slate-300 text-sm font-mono break-all leading-relaxed">
+                                        {msg.body}
+                                    </p>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
             </div>

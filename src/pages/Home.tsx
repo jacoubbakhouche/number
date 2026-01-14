@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { COUNTRIES, SERVICES, apiService } from '../services/api';
+import { apiService } from '../services/api';
 import type { TwilioNumber, Service } from '../types';
 import { CountrySelector } from '../components/CountrySelector';
 import { ServiceCard } from '../components/ServiceCard';
@@ -10,6 +10,10 @@ import { Search, Loader2, ArrowLeft } from 'lucide-react';
 
 export const Home: React.FC = () => {
     const navigate = useNavigate();
+
+    // Data from Service
+    const COUNTRIES = apiService.getCountries();
+    const SERVICES = apiService.getServices();
 
     // Selection State
     const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
@@ -29,7 +33,7 @@ export const Home: React.FC = () => {
         setAvailableNumbers(null); // Reset previous results
 
         try {
-            const numbers = await apiService.searchAvailableNumbers(selectedCountry.id, service.id);
+            const numbers = await apiService.searchNumbers(selectedCountry.id, service.id);
             setAvailableNumbers(numbers);
         } catch (e) {
             alert('Search failed');
@@ -44,8 +48,12 @@ export const Home: React.FC = () => {
 
         setIsBuying(phoneNumber);
         try {
-            const orderId = await apiService.buyPhoneNumber(phoneNumber, selectedService.id, selectedCountry.id);
-            navigate(`/order/${orderId}`);
+            const order = await apiService.buyNumber(phoneNumber, selectedService.id, selectedCountry.id);
+            if (order && order.id) {
+                navigate(`/order/${order.id}`);
+            } else {
+                // If null is returned but no exception thrown (handled in api)
+            }
         } catch (e: any) {
             // Show the actual error message from Twilio (e.g., "Address Required", "Insufficient Funds")
             alert(`Purchase Failed: ${e.message}`);
@@ -86,7 +94,7 @@ export const Home: React.FC = () => {
                         </button>
 
                         <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg flex items-center gap-3">
-                            <span className="text-2xl">{selectedCountry.flag}</span>
+                            <span className="text-2xl">{selectedCountry.iso /* Using ISO as flag placeholder or need emoji mapping */}</span>
                             <div className="flex-1">
                                 <div className="text-sm text-primary font-bold">{selectedService?.name}</div>
                                 <div className="text-xs text-slate-400">Showing available numbers</div>

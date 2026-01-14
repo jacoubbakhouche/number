@@ -8,7 +8,9 @@ export interface Service {
 export interface Country {
     id: number;
     name: string;
-    flag: string;
+    code: string;
+    iso: string;
+    price: number;
 }
 
 export interface TwilioNumber {
@@ -34,4 +36,10 @@ export interface Order {
     code?: string;
     createdAt: number;
     expiresAt: number;
+    messages?: {
+        id: string;
+        body: string;
+        date: number;
+        sender: string;
+    }[];
 }

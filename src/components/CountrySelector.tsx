@@ -19,7 +19,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({ countries, sel
                 className="w-full flex items-center justify-between bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-4 text-left hover:border-indigo-500/50 hover:bg-slate-800/80 transition-all duration-300 shadow-sm group"
             >
                 <span className="flex items-center gap-4">
-                    <span className="text-2xl drop-shadow-sm">{selectedCountry.flag}</span>
+                    <span className="text-xl font-bold font-mono text-white/50">{selectedCountry.iso}</span>
                     <span className="font-semibold text-slate-200 group-hover:text-white transition-colors">{selectedCountry.name}</span>
                 </span>
                 <div className={`p-1 rounded-full bg-slate-700/50 transition-all duration-300 ${isOpen ? 'bg-indigo-500/20 rotate-180' : ''}`}>
@@ -45,7 +45,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({ countries, sel
                                 className={`w-full flex items-center gap-4 p-4 hover:bg-indigo-500/10 transition-colors ${selectedCountry.id === country.id ? 'bg-indigo-500/20' : ''
                                     }`}
                             >
-                                <span className="text-2xl drop-shadow-sm">{country.flag}</span>
+                                <span className="text-xl font-bold font-mono text-white/50">{country.iso}</span>
                                 <span className={`font-medium ${selectedCountry.id === country.id ? 'text-indigo-300' : 'text-slate-300'}`}>{country.name}</span>
                             </button>
                         ))}

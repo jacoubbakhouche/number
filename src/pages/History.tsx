@@ -133,15 +133,7 @@ export const HistoryPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {order.code && (
-                                    <div className="mt-3 bg-emerald-900/10 border border-emerald-500/20 rounded-xl p-3 flex justify-between items-center group-hover:bg-emerald-900/20 transition-colors"
-                                        onClick={(e) => { e.stopPropagation(); copyToClipboard(order.code!); }}
-                                    >
-                                        <div className="text-xs text-emerald-600/80 uppercase tracking-wider font-bold">Code</div>
-                                        <div className="font-mono text-xl font-bold text-white tracking-widest">{order.code}</div>
-                                        <Copy size={16} className="text-emerald-500 opacity-50" />
-                                    </div>
-                                )}
+
                             </div>
                         );
                     })

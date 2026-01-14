@@ -1,35 +1,33 @@
-import type { Order, Service, Country, TwilioNumber } from '../types';
+import type { Service, Country, Order, TwilioNumber } from '../types';
 
-export const SERVICES: Service[] = [
-    { id: 'wa', name: 'WhatsApp', icon: 'MessageCircle', price: 0.50 },
-    { id: 'tg', name: 'Telegram', icon: 'Send', price: 0.75 },
-    { id: 'fb', name: 'Facebook', icon: 'Facebook', price: 0.30 },
-    { id: 'ig', name: 'Instagram', icon: 'Instagram', price: 0.40 },
-    { id: 'tw', name: 'Twitter', icon: 'Twitter', price: 0.25 },
-    { id: 'go', name: 'Google', icon: 'Mail', price: 0.20 },
-];
-
-export const COUNTRIES: Country[] = [
-    { id: 0, name: 'Global (Trial & PRO)', flag: '🌍' },
-    { id: 1, name: 'USA (Free Trial Friendly)', flag: '🇺🇸' }, // Best for testing purchase flow
-    { id: 46, name: 'Sweden (Pro Only)', flag: '🇸🇪' },
-    { id: 31, name: 'Netherlands (Pro Only)', flag: '🇳🇱' },
-    { id: 44, name: 'United Kingdom (ID Required)', flag: '🇬🇧' },
-    { id: 33, name: 'France', flag: '🇫🇷' },
-    { id: 358, name: 'Finland', flag: '🇫🇮' },
-    { id: 1, name: 'USA (Requires A2P)', flag: '🇺🇸' }, // Demoted
-    { id: 7, name: 'Russia', flag: '🇷🇺' },
-    { id: 62, name: 'Indonesia', flag: '🇮🇩' },
-];
-
-// ========== إعدادات TWILIO الحقيقية ==========
 const TWILIO_CONFIG = {
-    // ⚠️ ضع مفاتيحك هنا | Put your keys here
-    ACCOUNT_SID: "AC" + "32d1b67c099874e98598d6e91d4ff009",
-    AUTH_TOKEN: "f3" + "92949cffbbde6bd259f1bd4b19926d",
+    // Basic Auth credentials - in a real app these should be proxied or use functions
+    ACCOUNT_SID: "AC" + "a1b2c3d4e5f678901234567890abcdef", // Placeholder, will be replaced by user env if needed or retrieved securely
+    AUTH_TOKEN: "1a2b3c4d" + "5e6f7g8h9i0j1k2l3m4n5o6p", // Placeholder
+
+    // Using a reliable SMS service to bypass local carrier restrictions if any
+    BASE_URL: 'https://api.twilio.com/2010-04-01'
 };
 
-// =============================================
+const COUNTRIES: Country[] = [
+    // Golden Countries (Verified for WhatsApp/Telegram)
+    { id: 1, name: 'Sweden', code: '+46', iso: 'SE', price: 2.50 },
+    { id: 2, name: 'Netherlands', code: '+31', iso: 'NL', price: 2.50 },
+    { id: 3, name: 'United Kingdom', code: '+44', iso: 'GB', price: 2.00 },
+    { id: 4, name: 'Germany', code: '+49', iso: 'DE', price: 3.00 },
+
+    // Standard Countries
+    { id: 5, name: 'United States', code: '+1', iso: 'US', price: 1.00 },
+    { id: 6, name: 'Canada', code: '+1', iso: 'CA', price: 1.00 },
+];
+
+const SERVICES: Service[] = [
+    { id: 'wa', name: 'WhatsApp', icon: 'MessageCircle', price: 2.00 },
+    { id: 'tg', name: 'Telegram', icon: 'Send', price: 2.00 },
+    { id: 'fb', name: 'Facebook', icon: 'Facebook', price: 1.00 },
+    { id: 'ig', name: 'Instagram', icon: 'Instagram', price: 1.00 },
+    { id: 'ot', name: 'Other', icon: 'Globe', price: 1.00 }, // Generic
+];
 
 class RealTwilioService {
 
@@ -37,91 +35,84 @@ class RealTwilioService {
         return 'Basic ' + btoa(TWILIO_CONFIG.ACCOUNT_SID + ':' + TWILIO_CONFIG.AUTH_TOKEN);
     }
 
-    // 1. البحث الحقيقي في Twilio
-    async searchAvailableNumbers(countryId: number, serviceId: string): Promise<TwilioNumber[]> {
-
-        // Helper to search a specific country
-        const searchCountry = async (code: string): Promise<TwilioNumber[]> => {
-            // We prefer 'Mobile' numbers for SMS verification services like WhatsApp
-            // But if Mobile is not available for a country (like US sometimes mixes them), we fall back to Local
-            let type = 'Mobile';
-            if (code === 'US' || code === 'CA') type = 'Local';
-
-            // STRICT Override for WhatsApp: Force Mobile if possible, or warn user
-            if (serviceId === 'wa' && code !== 'US' && code !== 'CA') {
-                type = 'Mobile';
-            }
-
-            try {
-                let url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/AvailablePhoneNumbers/${code}/${type}.json?SmsEnabled=true`;
-                let response = await fetch(url, { headers: { 'Authorization': this.getBasicAuth() } });
-
-                if (!response.ok && type === 'Mobile') {
-                    // Fallback to Local
-                    const fallbackUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/AvailablePhoneNumbers/${code}/Local.json?SmsEnabled=true`;
-                    response = await fetch(fallbackUrl, { headers: { 'Authorization': this.getBasicAuth() } });
-                }
-
-                if (!response.ok) return [];
-
-                const data = await response.json();
-                const monthlyPrice = 1.15;
-
-                // 3. الفلترة الصارمة (The Strict Filter)
-                // نستبعد أي رقم لا يدعم SMS
-                const rawList = data.available_phone_numbers.map((num: any) => ({
-                    phoneNumber: num.phone_number,
-                    friendlyName: num.friendly_name,
-                    region: num.region || code,
-                    price: monthlyPrice,
-                    capabilities: {
-                        sms: num.capabilities?.SMS || num.capabilities?.sms || false,
-                        mms: num.capabilities?.MMS || num.capabilities?.mms || false,
-                        voice: num.capabilities?.voice || num.capabilities?.Voice || false
-                    },
-                    type: 'Monthly',
-                    beta: num.beta || false
-                }));
-
-                // إرجاع فقط الأرقام التي تدعم SMS (WhatsApp Compatible)
-                return rawList.filter((n: any) => n.capabilities.sms === true);
-            } catch (e) {
-                console.error(`Search failed for ${code}`, e);
-                return [];
-            }
-        };
-
-        // GLOBAL SEARCH LOGIC
-        if (countryId === 0) {
-            // Include US for Trial accounts + EU for Pro accounts
-            const targetCountries = ['US', 'SE', 'NL', 'GB'];
-            const results = await Promise.all(targetCountries.map(code => searchCountry(code)));
-            return results.flat().slice(0, 20);
-        }
-
-        // --- Standard Single Country Search ---
-        // Map ID to ISO Code appropriately
-        let countryCode = 'GB'; // Default to UK now
-        if (countryId === 1) countryCode = 'US';
-        else if (countryId === 44) countryCode = 'GB';
-        else if (countryId === 31) countryCode = 'NL';
-        else if (countryId === 46) countryCode = 'SE';
-        else if (countryId === 33) countryCode = 'FR';
-        else if (countryId === 358) countryCode = 'FI';
-        else if (countryId === 7) countryCode = 'RU';
-        else if (countryId === 62) countryCode = 'ID';
-
-        return searchCountry(countryCode);
+    getServices(): Service[] {
+        return SERVICES;
     }
 
-    // 2. الشراء الحقيقي (خصم الرصيد)
-    async buyPhoneNumber(phoneNumber: string, serviceId: string, countryId: number): Promise<string> {
-        try {
-            const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/IncomingPhoneNumbers.json`;
+    getCountries(): Country[] {
+        return COUNTRIES;
+    }
 
+    // 1. Search for available numbers in Twilio
+    async searchNumbers(countryId: number, serviceId: string): Promise<TwilioNumber[]> {
+        const country = COUNTRIES.find(c => c.id === countryId);
+        if (!country) return [];
+
+        try {
+            // Search mainly for Mobile numbers which are best for verification
+            // Twilio API: AvailablePhoneNumbers/[CountryIso]/Mobile
+            const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/AvailablePhoneNumbers/${country.iso}/Mobile.json?SmsEnabled=true&MmsEnabled=true`;
+
+            const response = await fetch(url, {
+                headers: { 'Authorization': this.getBasicAuth() }
+            });
+
+            if (!response.ok) {
+                console.error("Twilio Search Failed", await response.text());
+                // Fallback to Local/Mobile generic search if specific mobile endpoint fails
+                const fallbackUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/AvailablePhoneNumbers/${country.iso}/Local.json?SmsEnabled=true`;
+                const fallbackResponse = await fetch(fallbackUrl, { headers: { 'Authorization': this.getBasicAuth() } });
+                if (!fallbackResponse.ok) return [];
+                const fallbackData = await fallbackResponse.json();
+                return this.mapTwilioNumbers(fallbackData, serviceId);
+            }
+
+            const data = await response.json();
+            return this.mapTwilioNumbers(data, serviceId);
+
+        } catch (e) {
+            console.error("Search Error", e);
+            return [];
+        }
+    }
+
+    // Global Search (All Countries)
+    async searchGlobal(serviceId: string): Promise<TwilioNumber[]> {
+        let allNumbers: TwilioNumber[] = [];
+        // Prioritize golden European countries for better success rates
+        const targetCountries = COUNTRIES.filter(c => ['SE', 'NL', 'GB', 'DE'].includes(c.iso));
+
+        for (const country of targetCountries) {
+            const numbers = await this.searchNumbers(country.id, serviceId);
+            allNumbers = [...allNumbers, ...numbers];
+            if (allNumbers.length >= 20) break; // Limit results
+        }
+        return allNumbers;
+    }
+
+    private mapTwilioNumbers(data: any, serviceId: string): TwilioNumber[] {
+        if (!data.available_phone_numbers) return [];
+
+        const servicePrice = SERVICES.find(s => s.id === serviceId)?.price || 1.00;
+
+        return data.available_phone_numbers.map((num: any) => ({
+            phoneNumber: num.phone_number,
+            country: num.iso_country,
+            capabilities: num.capabilities,
+            price: servicePrice // Dynamic price based on service selected
+        }));
+    }
+
+    // 2. Buy a specific number
+    async buyNumber(phoneNumber: string, serviceId: string, countryId: number): Promise<Order | null> {
+        try {
+            const country = COUNTRIES.find(c => c.id === countryId); // Used for saving metadata
+
+            // Purchase from Twilio
+            const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/IncomingPhoneNumbers.json`;
             const params = new URLSearchParams();
             params.append('PhoneNumber', phoneNumber);
-            // params.append('SmsUrl', 'YOUR_WEBHOOK_URL'); // سنحتاج هذا لاحقاً لاستقبال الكود
+            // Optional: Set SmsUrl to a webhook if we had a backend server
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -133,21 +124,29 @@ class RealTwilioService {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.message || 'Purchase Failed');
+                const err = await response.text();
+                alert("Purchase Failed: " + err);
+                return null;
             }
 
             const data = await response.json();
 
-            // حفظ الطلب محلياً لاستكمال العملية
-            const orderId = data.sid;
-            this.saveLocalOrder(orderId, phoneNumber, serviceId, countryId);
+            // Save order locally
+            this.saveLocalOrder(data.sid, data.phone_number, serviceId, countryId);
 
-            return orderId;
+            return {
+                id: data.sid,
+                phoneNumber: data.phone_number,
+                serviceId,
+                countryId,
+                status: 'PENDING',
+                createdAt: Date.now(),
+                expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 Days
+            };
 
         } catch (e) {
-            console.error(e);
-            throw e;
+            console.error("Buy Error", e);
+            return null;
         }
     }
 
@@ -221,8 +220,7 @@ class RealTwilioService {
         }
     }
 
-    // جلب الرسائل (Polling) - لأنه ليس لديك سيرفر Webhook حالياً
-    // سنقوم بسؤال Twilio: "هل وصلت رسائل لهذا الرقم؟"
+    // جلب الرسائل (Polling) - وتحديث حالة الطلب
     async getStatus(orderId: string): Promise<string> {
         const saved = localStorage.getItem('my_orders');
         if (!saved) return 'ERROR';
@@ -231,10 +229,6 @@ class RealTwilioService {
         const order = orders[orderId];
         if (!order) return 'ERROR';
 
-        // إذا كان الكود محفوظاً مسبقاً، أعده فوراً
-        if (order.code) return `STATUS_OK:${order.code}`;
-
-        // إذا لم يكن، اسأل Twilio عن آخر الرسائل
         try {
             // فلترة الرسائل بتاريخ اليوم لتقليل البيانات
             const createdAtDate = new Date(order.createdAt);
@@ -250,33 +244,46 @@ class RealTwilioService {
 
             if (data.messages && data.messages.length > 0) {
                 // تصفية دقيقة: يجب أن تكون الرسالة وصلت *بعد* وقت الطلب
-                // Twilio returns date_created in UTC string format
                 const newMessages = data.messages.filter((msg: any) => {
                     const msgTime = new Date(msg.date_created).getTime();
-                    // نسمح بهامش خطأ دقيقة واحدة (قد يكون هناك اختلاف بسيط في الساعة)
+                    // نسمح بهامش خطأ دقيقة واحدة
                     return msgTime >= (order.createdAt - 60000);
                 });
 
                 if (newMessages.length > 0) {
-                    // نأخذ أحدث رسالة مقبولة
-                    const lastMsg = newMessages[0];
-                    const body = lastMsg.body;
+                    if (!order.messages) order.messages = [];
 
-                    // تحسين استخراج الكود: نبحث عن 3 إلى 8 أرقام
-                    const codeMatch = body.match(/(\d{3,4}[\s-]?\d{3,4})|\b\d{4,8}\b/);
+                    let foundNew = false;
 
-                    let code = body;
-                    if (codeMatch) {
-                        code = codeMatch[0].replace(/\D/g, '');
+                    // Process messages from oldest to newest to maintain order
+                    newMessages.reverse().forEach((msg: any) => {
+                        // Avoid duplicates
+                        if (!order.messages?.find((m: any) => m.id === msg.sid)) {
+                            foundNew = true;
+                            const body = msg.body;
+
+                            // Try to extract code (updates the main display)
+                            const codeMatch = body.match(/(\d{3,4}[\s-]?\d{3,4})|\b\d{4,8}\b/);
+                            if (codeMatch) {
+                                let extractedCode = codeMatch[0].replace(/\D/g, '');
+                                order.code = extractedCode;
+                                order.status = 'COMPLETED';
+                            }
+
+                            order.messages.unshift({
+                                id: msg.sid,
+                                body: body,
+                                date: new Date(msg.date_created).getTime(),
+                                sender: msg.from
+                            });
+                        }
+                    });
+
+                    if (foundNew) {
+                        orders[orderId] = order;
+                        localStorage.setItem('my_orders', JSON.stringify(orders));
+                        return order.code ? `STATUS_OK:${order.code}` : 'STATUS_MSG_RECEIVED';
                     }
-
-                    // نحفظ الكود ونحدث الحالة
-                    order.code = code;
-                    order.status = 'COMPLETED';
-                    orders[orderId] = order;
-                    localStorage.setItem('my_orders', JSON.stringify(orders));
-
-                    return `STATUS_OK:${code}`;
                 }
             }
 
@@ -300,7 +307,6 @@ class RealTwilioService {
         }
         return undefined;
     }
-
 
     getMyOrders(): Order[] {
         const saved = localStorage.getItem('my_orders');
@@ -333,6 +339,7 @@ class RealTwilioService {
                 headers: { 'Authorization': this.getBasicAuth() }
             });
 
+            // Twilio success is usually 204 No Content, but check OK or 404 (already gone)
             if (response.ok || response.status === 404) {
                 // 2. Remove from LocalStorage
                 const saved = localStorage.getItem('my_orders');
@@ -349,7 +356,7 @@ class RealTwilioService {
 
         } catch (e) {
             console.error("Release Error", e);
-            // Even if network fails, try to clean local if user insists (optional logic can differ)
+            // Even if network fails, try to clean local if user insists
             return false;
         }
     }
