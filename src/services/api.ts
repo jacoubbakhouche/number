@@ -18,9 +18,21 @@ const COUNTRIES: Country[] = [
     { id: 3, name: 'United Kingdom', code: '+44', iso: 'GB', price: 2.00 },
     { id: 4, name: 'Germany', code: '+49', iso: 'DE', price: 3.00 },
 
-    // Standard Countries
+    // Standard & Easy Countries
     { id: 5, name: 'United States', code: '+1', iso: 'US', price: 1.00 },
     { id: 6, name: 'Canada', code: '+1', iso: 'CA', price: 1.00 },
+    { id: 7, name: 'Brazil', code: '+55', iso: 'BR', price: 1.50 },
+    { id: 8, name: 'Poland', code: '+48', iso: 'PL', price: 2.00 },
+    { id: 9, name: 'Spain', code: '+34', iso: 'ES', price: 2.00 },
+    { id: 10, name: 'Indonesia', code: '+62', iso: 'ID', price: 1.50 },
+    { id: 11, name: 'South Africa', code: '+27', iso: 'ZA', price: 1.50 },
+    { id: 12, name: 'Lithuania', code: '+370', iso: 'LT', price: 2.00 },
+    { id: 13, name: 'Estonia', code: '+372', iso: 'EE', price: 2.50 },
+    { id: 14, name: 'Israel', code: '+972', iso: 'IL', price: 2.00 },
+    { id: 15, name: 'Australia', code: '+61', iso: 'AU', price: 3.00 },
+    { id: 16, name: 'Austria', code: '+43', iso: 'AT', price: 3.00 },
+    { id: 17, name: 'Belgium', code: '+32', iso: 'BE', price: 3.00 },
+    { id: 18, name: 'France', code: '+33', iso: 'FR', price: 2.00 },
 ];
 
 const SERVICES: Service[] = [
@@ -106,18 +118,20 @@ class RealTwilioService {
     async searchGlobal(serviceId: string): Promise<TwilioNumber[]> {
         let allNumbers: TwilioNumber[] = [];
 
-        // Include US and Canada as reliable fallbacks
-        // Prioritize golden European countries + US for best mix
-        const targetCountries = COUNTRIES.filter(c => ['US', 'GB', 'SE', 'NL', 'DE', 'CA'].includes(c.iso));
+        // Search ALL defined countries to maximize results
+        // Randomize order slightly to give chance to different countries to appear first
+        const targetCountries = [...COUNTRIES].sort(() => Math.random() - 0.5);
 
         for (const country of targetCountries) {
-            // Add a small delay/check to prevent rate limiting if loop is fast
             try {
                 const numbers = await this.searchNumbers(country.id, serviceId);
                 allNumbers = [...allNumbers, ...numbers];
-                if (allNumbers.length >= 20) break; // Limit results to keep UI clean
+
+                // If we have enough numbers (e.g. 50), stop searching to improve UX speed
+                if (allNumbers.length >= 50) break;
             } catch (e) {
-                console.warn(`Skipping ${country.name} due to error`, e);
+                // Silently skip failed countries to continue searching others
+                console.log(`Skipping ${country.name}`);
             }
         }
         return allNumbers;
