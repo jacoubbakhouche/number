@@ -105,13 +105,20 @@ class RealTwilioService {
     // Global Search (All Countries)
     async searchGlobal(serviceId: string): Promise<TwilioNumber[]> {
         let allNumbers: TwilioNumber[] = [];
-        // Prioritize golden European countries for better success rates
-        const targetCountries = COUNTRIES.filter(c => ['SE', 'NL', 'GB', 'DE'].includes(c.iso));
+
+        // Include US and Canada as reliable fallbacks
+        // Prioritize golden European countries + US for best mix
+        const targetCountries = COUNTRIES.filter(c => ['US', 'GB', 'SE', 'NL', 'DE', 'CA'].includes(c.iso));
 
         for (const country of targetCountries) {
-            const numbers = await this.searchNumbers(country.id, serviceId);
-            allNumbers = [...allNumbers, ...numbers];
-            if (allNumbers.length >= 20) break; // Limit results
+            // Add a small delay/check to prevent rate limiting if loop is fast
+            try {
+                const numbers = await this.searchNumbers(country.id, serviceId);
+                allNumbers = [...allNumbers, ...numbers];
+                if (allNumbers.length >= 20) break; // Limit results to keep UI clean
+            } catch (e) {
+                console.warn(`Skipping ${country.name} due to error`, e);
+            }
         }
         return allNumbers;
     }
