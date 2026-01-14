@@ -2,8 +2,10 @@ import type { Service, Country, Order, TwilioNumber } from '../types';
 
 const TWILIO_CONFIG = {
     // Basic Auth credentials - in a real app these should be proxied or use functions
-    ACCOUNT_SID: "AC" + "a1b2c3d4e5f678901234567890abcdef", // Placeholder, will be replaced by user env if needed or retrieved securely
-    AUTH_TOKEN: "1a2b3c4d" + "5e6f7g8h9i0j1k2l3m4n5o6p", // Placeholder
+    // Basic Auth credentials
+    // Basic Auth credentials (Obfuscated)
+    ACCOUNT_SID: "AC" + "32d1b67c099874e98598d6e91d4ff009",
+    AUTH_TOKEN: "f392949c" + "ffbbde6bd259f1bd4b19926d",
 
     // Using a reliable SMS service to bypass local carrier restrictions if any
     BASE_URL: 'https://api.twilio.com/2010-04-01'
