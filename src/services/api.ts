@@ -233,7 +233,11 @@ class RealTwilioService {
 
         // إذا لم يكن، اسأل Twilio عن آخر الرسائل
         try {
-            const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/Messages.json?To=${encodeURIComponent(order.phoneNumber)}`;
+            // فلترة الرسائل بتاريخ اليوم لتقليل البيانات
+            const createdAtDate = new Date(order.createdAt);
+            const dateStr = createdAtDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+            const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/Messages.json?To=${encodeURIComponent(order.phoneNumber)}&DateSent>=${dateStr}`;
 
             const response = await fetch(url, {
                 headers: { 'Authorization': this.getBasicAuth() }
@@ -242,27 +246,35 @@ class RealTwilioService {
             const data = await response.json();
 
             if (data.messages && data.messages.length > 0) {
-                // نأخذ آخر رسالة
-                const lastMsg = data.messages[0];
-                const body = lastMsg.body;
+                // تصفية دقيقة: يجب أن تكون الرسالة وصلت *بعد* وقت الطلب
+                // Twilio returns date_created in UTC string format
+                const newMessages = data.messages.filter((msg: any) => {
+                    const msgTime = new Date(msg.date_created).getTime();
+                    // نسمح بهامش خطأ دقيقة واحدة (قد يكون هناك اختلاف بسيط في الساعة)
+                    return msgTime >= (order.createdAt - 60000);
+                });
 
-                // تحسين استخراج الكود: نبحث عن 3 إلى 8 أرقام، قد يفصلها شَرطة أو مسافة
-                // أمثلة: 123456 | 123-456 | 123 456
-                const codeMatch = body.match(/(\d{3,4}[\s-]?\d{3,4})|\b\d{4,8}\b/);
+                if (newMessages.length > 0) {
+                    // نأخذ أحدث رسالة مقبولة
+                    const lastMsg = newMessages[0];
+                    const body = lastMsg.body;
 
-                let code = body;
-                if (codeMatch) {
-                    // وجدنا كود! نقوم بتنظيفه من أي فواصل أو رموز لنحصل على الرقم الصافي فقط
-                    code = codeMatch[0].replace(/\D/g, '');
+                    // تحسين استخراج الكود: نبحث عن 3 إلى 8 أرقام
+                    const codeMatch = body.match(/(\d{3,4}[\s-]?\d{3,4})|\b\d{4,8}\b/);
+
+                    let code = body;
+                    if (codeMatch) {
+                        code = codeMatch[0].replace(/\D/g, '');
+                    }
+
+                    // نحفظ الكود ونحدث الحالة
+                    order.code = code;
+                    order.status = 'COMPLETED';
+                    orders[orderId] = order;
+                    localStorage.setItem('my_orders', JSON.stringify(orders));
+
+                    return `STATUS_OK:${code}`;
                 }
-
-                // نحفظ الكود ونحدث الحالة
-                order.code = code;
-                order.status = 'COMPLETED';
-                orders[orderId] = order;
-                localStorage.setItem('my_orders', JSON.stringify(orders));
-
-                return `STATUS_OK:${code}`;
             }
 
         } catch (e) {

@@ -4,7 +4,7 @@ import { apiService } from '../services/api';
 import type { Order } from '../types';
 import { Layout } from '../components/Layout';
 import { IconMap } from '../utils/icons';
-import { Clock, Copy, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Clock, Copy, ArrowLeft, MessageSquare, Trash2 } from 'lucide-react';
 
 export const HistoryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -26,9 +26,21 @@ export const HistoryPage: React.FC = () => {
 
     return (
         <Layout title="My Numbers">
-            <div className="mb-6">
+            <div className="mb-6 flex justify-between items-center">
                 <button onClick={() => navigate('/')} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm transition-colors">
                     <ArrowLeft size={16} /> Back to Store
+                </button>
+                <button
+                    onClick={() => {
+                        if (confirm("Are you sure you want to clear all history? This cannot be undone.")) {
+                            localStorage.removeItem('my_orders');
+                            window.location.reload();
+                        }
+                    }}
+                    className="text-slate-500 hover:text-red-400 transition-colors p-2"
+                    title="Clear History"
+                >
+                    <Trash2 size={16} />
                 </button>
             </div>
 
