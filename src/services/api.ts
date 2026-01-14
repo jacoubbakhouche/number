@@ -69,13 +69,26 @@ class RealTwilioService {
                     const fallbackResponse = await fetch(fallbackUrl, { headers: { 'Authorization': this.getBasicAuth() } });
 
                     if (!fallbackResponse.ok) {
-                        console.error("Twilio Local Search also failed:", await fallbackResponse.text());
-                        return [];
+                        const fbErr = await fallbackResponse.text();
+                        console.error("Twilio Local Search also failed:", fbErr);
+                        // Convert specific errors to readable messages
+                        if (fbErr.includes("Address")) throw new Error("Requires Local Address Presence (Regulation). Try another country.");
+                        throw new Error(fbErr);
                     }
                     const fallbackData = await fallbackResponse.json();
                     return this.mapTwilioNumbers(fallbackData, serviceId);
                 }
-                return [];
+
+                // If it was 401/403 or other critical
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error("API Authentication Failed. Check credentials.");
+                }
+
+                if (response.status === 400 && errText.includes("Address")) {
+                    throw new Error("Mobile Numbers require Address Proof in this country.");
+                }
+
+                return []; // Return empty if just no numbers found (404)
             }
 
             const data = await response.json();
@@ -368,11 +381,21 @@ class RealTwilioService {
 
             // Twilio success is usually 204 No Content, but check OK or 404 (already gone)
             if (response.ok || response.status === 404) {
-                // 2. Remove from LocalStorage
+                // 2. Remove from LocalStorage (Robust delete)
                 const saved = localStorage.getItem('my_orders');
                 if (saved) {
                     const orders = JSON.parse(saved);
-                    delete orders[sid];
+
+                    // Delete by Key (SID)
+                    if (orders[sid]) delete orders[sid];
+
+                    // Also search and delete by Value (in case ID/Phone mismatch or legacy data)
+                    for (const key in orders) {
+                        if (orders[key].id === sid || orders[key].phoneNumber === sid) {
+                            delete orders[key];
+                        }
+                    }
+
                     localStorage.setItem('my_orders', JSON.stringify(orders));
                 }
                 return true;
@@ -383,7 +406,8 @@ class RealTwilioService {
 
         } catch (e) {
             console.error("Release Error", e);
-            // Even if network fails, try to clean local if user insists
+            // Even if network fails, try to clean local if user insists (optimistic delete)
+            // But usually we want confirmation. Let's return false to handle UI properly.
             return false;
         }
     }
