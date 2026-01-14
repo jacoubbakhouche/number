@@ -35,9 +35,9 @@ export const AvailableNumbersList: React.FC<AvailableNumbersListProps> = ({ numb
                                 {num.beta && <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded">BETA</span>}
                             </div>
                             <div className="flex gap-1 mt-1">
-                                {num.capabilities.sms && <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">SMS</span>}
+                                {(num.capabilities.SMS || num.capabilities.sms) && <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">SMS</span>}
                                 {num.capabilities.voice && <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">VOICE</span>}
-                                {num.capabilities.mms && <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">MMS</span>}
+                                {(num.capabilities.MMS || num.capabilities.mms) && <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">MMS</span>}
                             </div>
                         </div>
                     </div>
