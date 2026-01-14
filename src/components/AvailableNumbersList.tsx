@@ -22,10 +22,13 @@ export const AvailableNumbersList: React.FC<AvailableNumbersListProps> = ({ numb
                 >
                     <div>
                         <div>
-                            <div className="font-mono font-semibold text-slate-200">{num.friendlyName}</div>
-                            <div className="text-xs text-slate-400 flex gap-2 items-center">
+                            <div className="font-mono font-semibold text-slate-200 flex items-center gap-2">
+                                {num.country && <span className="bg-slate-700 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">{num.country}</span>}
+                                {num.phoneNumber}
+                            </div>
+                            <div className="text-xs text-slate-400 flex gap-2 items-center mt-1">
                                 <span>{num.region}</span>
-                                <span className="text-emerald-400 font-bold">• ${num.price}</span>
+                                <span className="text-emerald-400 font-bold ml-auto">• ${num.price}</span>
                                 <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">
                                     {num.type || 'Monthly'}
                                 </span>

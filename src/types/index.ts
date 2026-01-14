@@ -15,16 +15,19 @@ export interface Country {
 
 export interface TwilioNumber {
     phoneNumber: string;
-    friendlyName: string;
-    region: string;
+    friendlyName?: string;
+    country?: string; // ISO Code
+    region?: string;
     price: number;
     capabilities: {
-        sms: boolean;
-        mms: boolean;
+        SMS: boolean;
+        MMS: boolean;
         voice: boolean;
+        sms?: boolean; // support lowercase variant
+        mms?: boolean;
     };
-    beta: boolean; // Some numbers are beta/instant
-    type?: string; // Monthly, Instant, etc.
+    beta?: boolean;
+    type?: string;
 }
 
 export interface Order {
