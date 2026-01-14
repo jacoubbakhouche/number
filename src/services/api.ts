@@ -198,7 +198,10 @@ class RealTwilioService {
                         serviceId: 'wa', // Default assumption, or 'unknown'
                         countryId: 1, // Default to US, or parse from code
                         status: 'READY',
-                        createdAt: new Date(num.date_created).getTime(),
+                        // CRITICAL FIX: When syncing an existing number from Twilio, use the CURRENT TIME as createdAt.
+                        // This prevents fetching old history/messages (like old Facebook codes) that existed before this sync.
+                        // We only want to see NEW messages arriving from this moment onwards.
+                        createdAt: Date.now(),
                         expiresAt: now + 30 * 24 * 60 * 60 * 1000,
                         code: undefined
                     };
