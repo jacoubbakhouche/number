@@ -91,11 +91,45 @@ export const HistoryPage: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className={`px-2 py-1 rounded-full text-xs font-bold ${order.code ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                                        order.status === 'EXPIRED' ? 'bg-red-500/10 text-red-400' :
-                                            'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 animate-pulse'
-                                        }`}>
-                                        {order.code ? 'CODE RECEIVED' : order.status}
+                                    <div className="flex items-center gap-2">
+                                        <div className={`px-2 py-1 rounded-full text-xs font-bold ${order.code ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                            order.status === 'EXPIRED' ? 'bg-red-500/10 text-red-400' :
+                                                'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 animate-pulse'
+                                            }`}>
+                                            {order.code ? 'CODE RECEIVED' : order.status}
+                                        </div>
+
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (confirm("هل أنت متأكد؟ سيتم حذف الرقم نهائياً للتتمكن من شراء رقم جديد.")) {
+                                                    // Fallback ID checking
+                                                    const targetId = order.id;
+                                                    if (targetId && !targetId.startsWith('+')) {
+                                                        const success = await apiService.releaseNumber(targetId);
+                                                        if (success) {
+                                                            setOrders(prev => prev.filter(o => o.id !== targetId));
+                                                        } else {
+                                                            alert("فشل حذف الرقم من Twilio. حاول لاحقاً.");
+                                                        }
+                                                    } else {
+                                                        // Legacy or Manual cleanup for numbers without proper SIDs
+                                                        apiService.releaseNumber(order.phoneNumber).then(() => { // Try anyway
+                                                            const orders = JSON.parse(localStorage.getItem('my_orders') || '{}');
+                                                            delete orders[order.id || order.phoneNumber];
+                                                            delete orders[order.phoneNumber];
+                                                            localStorage.setItem('my_orders', JSON.stringify(orders));
+                                                            setOrders(prev => prev.filter(o => o.phoneNumber !== order.phoneNumber));
+                                                        });
+                                                    }
+                                                }
+                                            }}
+                                            className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-colors border border-red-500/20"
+                                            title="حذف الرقم"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </div>
                                 </div>
 

@@ -318,6 +318,38 @@ class RealTwilioService {
         }
         return [];
     }
+
+    // حذف الرقم من Twilio ومن الذاكرة المحلية
+    async releaseNumber(sid: string): Promise<boolean> {
+        try {
+            // 1. Delete from Twilio (Release the number)
+            const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_CONFIG.ACCOUNT_SID}/IncomingPhoneNumbers/${sid}.json`;
+
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: { 'Authorization': this.getBasicAuth() }
+            });
+
+            if (response.ok || response.status === 404) {
+                // 2. Remove from LocalStorage
+                const saved = localStorage.getItem('my_orders');
+                if (saved) {
+                    const orders = JSON.parse(saved);
+                    delete orders[sid];
+                    localStorage.setItem('my_orders', JSON.stringify(orders));
+                }
+                return true;
+            }
+
+            console.error("Failed to release number from Twilio", await response.text());
+            return false;
+
+        } catch (e) {
+            console.error("Release Error", e);
+            // Even if network fails, try to clean local if user insists (optional logic can differ)
+            return false;
+        }
+    }
 }
 
 export const apiService = new RealTwilioService();
