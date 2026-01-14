@@ -337,7 +337,10 @@ class RealTwilioService {
                                 id: msg.sid,
                                 body: body,
                                 date: new Date(msg.date_created).getTime(),
-                                sender: msg.from
+                                sender: msg.from,
+                                status: msg.status,
+                                errorCode: msg.error_code,
+                                errorMessage: msg.error_message
                             });
                         }
                     });

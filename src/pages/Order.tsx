@@ -199,15 +199,27 @@ const Order = () => {
                                         </div>
                                     )}
                                     <div className="flex justify-between items-start mb-2">
-                                        <span className="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">
-                                            {msg.sender || 'Unknown Sender'}
-                                        </span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded w-fit">
+                                                {msg.sender || 'Unknown Sender'}
+                                            </span>
+                                            {msg.status === 'failed' || msg.status === 'undelivered' ? (
+                                                <span className="text-[10px] text-red-400 flex items-center gap-1 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 w-fit">
+                                                    <AlertCircle size={10} /> Failed: {msg.errorCode || 'Blocked'}
+                                                </span>
+                                            ) : null}
+                                        </div>
                                         <span className="text-xs text-slate-500 flex items-center gap-1">
                                             {new Date(msg.date).toLocaleTimeString()}
                                         </span>
                                     </div>
                                     <p className="text-slate-300 text-sm font-mono break-all leading-relaxed bg-black/20 p-2 rounded-lg border border-white/5">
                                         {msg.body}
+                                        {msg.errorMessage && (
+                                            <span className="block mt-2 text-xs text-red-400 bg-red-900/20 p-1 rounded">
+                                                Server Error: {msg.errorMessage}
+                                            </span>
+                                        )}
                                     </p>
                                 </motion.div>
                             ))}

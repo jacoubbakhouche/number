@@ -44,5 +44,8 @@ export interface Order {
         body: string;
         date: number;
         sender: string;
+        status?: string;
+        errorCode?: number;
+        errorMessage?: string;
     }[];
 }
